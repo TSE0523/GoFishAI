@@ -149,77 +149,78 @@ def Training(TRIALS, epsilon):
 
         P1 = True
         P2 = True
-        while P1:
-            if len(env.Hand1) == 0:
-                env.Draw(env.Hand1)
-            if len(env.Hand2) == 0:
-                env.Draw(env.Hand2)
-            state = LRU.Get((tuple(env.Hand1), tuple(env.Hand2), tuple(sorted(env.potential1.items())), pastguess1), env.GetState)
-            action = GetAction(env, state, epsilon, env.Hand1)
-            pastguess1 = action
-            states1.append(state)
-            action1.append(action)
-
-            won = env.Question(action, env.Hand1, env.Hand2)
-            if action in env.Hand1:
-                env.potential2[action] += 1
-                env.potential1[action] = 0
-            else:
-                env.Q[state][action - 1] = -9
-            reward = -1
-            if won:
-                points = env.CheckBooks(env.Hand1)
-                reward = 1 + points
-                env.Score1 += points
-
-            newstate = LRU.Get((tuple(env.Hand1), tuple((env.Hand2)), tuple(sorted(env.potential1.items())), pastguess1), env.GetState)
-            bestfuture = np.max(env.Q[newstate])
-
-            if env.Q[state][action - 1] < 5:
-                env.Q[state][action - 1] += alpha * (reward + gamma * bestfuture - env.Q[state][action - 1])
-
-            if not won:
-                if len(env.Cards) > 0:
+        while env.Score1 + env.Score2 < 13:
+            while P1:
+                if len(env.Hand1) == 0:
                     env.Draw(env.Hand1)
-                    while len(env.Hand1) == 0:
-                        env.Draw(env.Hand1)
-                    env.Score1 += env.CheckBooks(env.Hand1)
-                P1 = False
-        while P2:
-            if len(env.Hand2) == 0:
-                env.Draw(env.Hand2)
-            if len(env.Hand1) == 0:
-                env.Draw(env.Hand1)
-            state = LRU.Get((tuple((env.Hand2)), tuple((env.Hand1)), tuple(sorted(env.potential2.items())), pastguess2), env.GetState)
-            action = GetAction(env, state, epsilon, env.Hand2)
-            pastguess2 = action
-            states2.append(state)
-            action2.append(action)
-
-            won = env.Question(action, env.Hand2, env.Hand1)
-            if action in env.Hand2:
-                env.potential1[action] += 1
-                env.potential2[action] = 0
-            else:
-                env.Q[state][action - 1] = -9
-            reward = -1
-            if won:
-                points = env.CheckBooks(env.Hand2)
-                reward = 1 + points
-                env.Score2 += points
-
-            newstate = LRU.Get((tuple((env.Hand2)), tuple((env.Hand1)), tuple(sorted(env.potential2.items())), pastguess2), env.GetState)
-            bestfuture = np.max(env.Q[newstate])
-            if env.Q[state][action - 1] < 5:
-                env.Q[state][action - 1] += alpha * (reward + gamma * bestfuture - env.Q[state][action - 1])
-
-            if not won:
-                if len(env.Cards) > 0:
+                if len(env.Hand2) == 0:
                     env.Draw(env.Hand2)
-                    while len(env.Hand2) == 0:
+                state = LRU.Get((tuple(env.Hand1), tuple(env.Hand2), tuple(sorted(env.potential1.items())), pastguess1), env.GetState)
+                action = GetAction(env, state, epsilon, env.Hand1)
+                pastguess1 = action
+                states1.append(state)
+                action1.append(action)
+
+                won = env.Question(action, env.Hand1, env.Hand2)
+                if action in env.Hand1:
+                    env.potential2[action] += 1
+                    env.potential1[action] = 0
+                else:
+                    env.Q[state][action - 1] = -9
+                reward = -1
+                if won:
+                    points = env.CheckBooks(env.Hand1)
+                    reward = 1 + points
+                    env.Score1 += points
+
+                newstate = LRU.Get((tuple(env.Hand1), tuple((env.Hand2)), tuple(sorted(env.potential1.items())), pastguess1), env.GetState)
+                bestfuture = np.max(env.Q[newstate])
+
+                if env.Q[state][action - 1] < 5:
+                    env.Q[state][action - 1] += alpha * (reward + gamma * bestfuture - env.Q[state][action - 1])
+
+                if not won:
+                    if len(env.Cards) > 0:
+                        env.Draw(env.Hand1)
+                        while len(env.Hand1) == 0:
+                            env.Draw(env.Hand1)
+                        env.Score1 += env.CheckBooks(env.Hand1)
+                    P1 = False
+            while P2:
+                if len(env.Hand2) == 0:
+                    env.Draw(env.Hand2)
+                if len(env.Hand1) == 0:
+                    env.Draw(env.Hand1)
+                state = LRU.Get((tuple((env.Hand2)), tuple((env.Hand1)), tuple(sorted(env.potential2.items())), pastguess2), env.GetState)
+                action = GetAction(env, state, epsilon, env.Hand2)
+                pastguess2 = action
+                states2.append(state)
+                action2.append(action)
+
+                won = env.Question(action, env.Hand2, env.Hand1)
+                if action in env.Hand2:
+                    env.potential1[action] += 1
+                    env.potential2[action] = 0
+                else:
+                    env.Q[state][action - 1] = -9
+                reward = -1
+                if won:
+                    points = env.CheckBooks(env.Hand2)
+                    reward = 1 + points
+                    env.Score2 += points
+
+                newstate = LRU.Get((tuple((env.Hand2)), tuple((env.Hand1)), tuple(sorted(env.potential2.items())), pastguess2), env.GetState)
+                bestfuture = np.max(env.Q[newstate])
+                if env.Q[state][action - 1] < 5:
+                    env.Q[state][action - 1] += alpha * (reward + gamma * bestfuture - env.Q[state][action - 1])
+
+                if not won:
+                    if len(env.Cards) > 0:
                         env.Draw(env.Hand2)
-                    env.Score2 += env.CheckBooks(env.Hand2)
-                P2 = False
+                        while len(env.Hand2) == 0:
+                            env.Draw(env.Hand2)
+                        env.Score2 += env.CheckBooks(env.Hand2)
+                    P2 = False
         if not env.Cards and not env.Hand1 and not env.Hand2:
             if env.Score1 < env.Score2:
                 for i in range(len(states1)):
