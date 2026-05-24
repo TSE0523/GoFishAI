@@ -60,7 +60,6 @@ class GoFishEnv:
             while card in victim:
                 bisect.insort(player, card)
                 victim.remove(card)
-                victim.remove(card)
             return True
         return False
 
