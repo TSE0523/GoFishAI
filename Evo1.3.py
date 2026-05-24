@@ -3,7 +3,6 @@ import time
 
 import joblib
 import numpy as np
-import pickle
 import os
 from collections import defaultdict
 from collections import OrderedDict
@@ -28,7 +27,7 @@ class GoFishEnv:
         self.potential2 = {13 : 0, 12 : 0, 11 : 0, 10 : 0, 9 : 0, 8 : 0, 7 : 0, 6 : 0, 5 : 0, 4 : 0, 3 : 0, 2 : 0, 1 : 0}
         self.Q = defaultdict(self.DefaultQ)
         if os.path.exists("q_table.pkl"):
-            self.Q = deepcopy(defaultdict(DefaultQ, joblib.load("q_table.pkl")))
+            self.Q = deepcopy(defaultdict(self.DefaultQ, joblib.load("q_table.pkl")))
 
     def Reset(self):
         self.Cards = self.CONST_DECK.copy()
@@ -48,7 +47,9 @@ class GoFishEnv:
 
     def Draw(self, player):
         if self.Cards:
-            R = np.random.choice(list(self.Cards.keys()))
+            cards = list(self.Cards.keys())
+            weights = list(self.Cards.values())
+            R = random.choices(cards, weights, k=1)[0]
             bisect.insort(player, R)
             self.Cards[R] -= 1
             if self.Cards[R] <= 0:
@@ -58,6 +59,7 @@ class GoFishEnv:
         if card in victim and card in player:
             while card in victim:
                 bisect.insort(player, card)
+                victim.remove(card)
                 victim.remove(card)
             return True
         return False
@@ -87,7 +89,7 @@ class GoFishEnv:
                 hand |= (1 << (i - 1))
 
         potential = dict(potential)
-        useful = deepcopy(potential)
+        useful = potential.copy()
         for card in list(useful.keys()):
             if card not in player:
                 del useful[card]
@@ -98,7 +100,7 @@ class GoFishEnv:
         return state
 
 class LRU_CACHE:
-    def __init__(self, maxsize=2000000):
+    def __init__(self, maxsize=500000):
         self.cache = OrderedDict()
         self.maxsize = maxsize
 
@@ -106,7 +108,7 @@ class LRU_CACHE:
         if state in self.cache:
             self.cache.move_to_end(state)
             return self.cache[state]
-        bitstate = encoder(state[0], state[1], state[2], state[3])
+        bitstate = encoder(list(state[0]), list(state[1]), dict(state[2]), state[3])
         self.cache[state] = bitstate
         if len(self.cache) > self.maxsize:
             self.cache.popitem(last=False)
@@ -122,20 +124,23 @@ if os.path.exists("q_table.pkl"):
     with open("q_table.pkl", "rb") as f:
         GLOBALQ = deepcopy(defaultdict(DefaultQ, joblib.load("q_table.pkl")))
 
+print(GLOBALQ)
+
 def GetAction(env, state, epsilon, hand):
     if np.random.rand() < epsilon and len(hand):
         return np.random.choice(hand)
     else:
+        q = env.Q[state].copy()
         for i in range(13):
             if not i + 1 in hand:
-                env.Q[state][int(i)] = -9999
-        return int(np.argmax(env.Q[state]) + 1)
+                q[i] = -9999
+        return np.argmax(q) + 1
 
 def Training(TRIALS, epsilon):
     env = GoFishEnv()
     LRU = LRU_CACHE()
-    alpha = 0.2
-    gamma = 0.9
+    alpha = 0.4
+    gamma = 0.7
 
     for i in range(TRIALS):
         states1 = []
@@ -150,6 +155,8 @@ def Training(TRIALS, epsilon):
         P1 = True
         P2 = True
         while env.Score1 + env.Score2 < 13:
+            P1 = True
+            P2 = True
             while P1:
                 if len(env.Hand1) == 0:
                     env.Draw(env.Hand1)
@@ -166,7 +173,7 @@ def Training(TRIALS, epsilon):
                     env.potential2[action] += 1
                     env.potential1[action] = 0
                 else:
-                    env.Q[state][action - 1] = -9
+                    env.Q[state][action - 1] -= 0.6
                 reward = -1
                 if won:
                     points = env.CheckBooks(env.Hand1)
@@ -202,7 +209,7 @@ def Training(TRIALS, epsilon):
                     env.potential1[action] += 1
                     env.potential2[action] = 0
                 else:
-                    env.Q[state][action - 1] = -9
+                    env.Q[state][action - 1] -= 0.6
                 reward = -1
                 if won:
                     points = env.CheckBooks(env.Hand2)
@@ -242,29 +249,26 @@ def Training(TRIALS, epsilon):
                     if env.Q[states1[i]][action1[i] - 1] < 5:
                         reward = 2 + ((env.Score2 + 1) / (env.Score1 + 1))
                         env.Q[states1[i]][action1[i] - 1] += alpha * (reward - env.Q[states1[i]][action1[i] - 1])
-    return deepcopy(env.Q)
+    return dict(env.Q)
 
 def Merge(Global, Local, Agents):
     for state, actions in Local.items():
         if not state in Global:
-            Global[state] = actions
-            for i in range(len(Global[state])):
-                if Global[state][i] < 5 and Global[state][i] > -5:
-                    Global[state][i] /= Agents
+            Global[state] = actions.copy()
         else:
             for i in range(len(actions)):
-                if Global[state][i] < 5 and Global[state][i] > -5:
-                    Global[state][i] += actions[i]
+                Global[state][i] += actions[i]
+                Global[state][i] /= 2
     return Global
 
-AUTOSAVE = 1000000
-TOTAL = 100000000
-AGENTS = 8
+AUTOSAVE = 100000
+TOTAL = 1000000
+AGENTS = 3
 
 if __name__ == "__main__":
     progress = 0
     epsilon = 1.0
-    e_decay = 0.999999
+    e_decay = 0.9
     for i in range(TOTAL // AUTOSAVE):
         results = Parallel(n_jobs = AGENTS)(delayed(Training)(AUTOSAVE // AGENTS, epsilon) for i in range(AGENTS))
         for state in results:
