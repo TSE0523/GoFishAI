@@ -12,10 +12,16 @@ import bisect
 
 starttime = time.time()
 
-class GoFishEnv:
-    def DefaultQ(self):
-        return [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+def DefaultQ(self):
+    return [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
+GLOBALQ = defaultdict(DefaultQ)
+if os.path.exists("q_table.pkl"):
+    with open("q_table.pkl", "rb") as f:
+        GLOBALQ = deepcopy(defaultdict(DefaultQ, joblib.load("q_table.pkl")))
+print(GLOBALQ)
+
+class GoFishEnv:
     def __init__(self):
         self.CONST_DECK = {13 : 4, 12 : 4, 11 : 4, 10 : 4, 9 : 4, 8 : 4, 7 : 4, 6 : 4, 5 : 4, 4 : 4, 3 : 4, 2 : 4, 1 : 4}
         self.Cards = {13 : 4, 12 : 4, 11 : 4, 10 : 4, 9 : 4, 8 : 4, 7 : 4, 6 : 4, 5 : 4, 4 : 4, 3 : 4, 2 : 4, 1 : 4}
@@ -25,9 +31,7 @@ class GoFishEnv:
         self.Score2 = 0
         self.potential1 = {13 : 0, 12 : 0, 11 : 0, 10 : 0, 9 : 0, 8 : 0, 7 : 0, 6 : 0, 5 : 0, 4 : 0, 3 : 0, 2 : 0, 1 : 0}
         self.potential2 = {13 : 0, 12 : 0, 11 : 0, 10 : 0, 9 : 0, 8 : 0, 7 : 0, 6 : 0, 5 : 0, 4 : 0, 3 : 0, 2 : 0, 1 : 0}
-        self.Q = defaultdict(self.DefaultQ)
-        if os.path.exists("q_table.pkl"):
-            self.Q = deepcopy(defaultdict(self.DefaultQ, joblib.load("q_table.pkl")))
+        self.Q = GLOBALQ
 
     def Reset(self):
         self.Cards = self.CONST_DECK.copy()
@@ -99,7 +103,7 @@ class GoFishEnv:
         return state
 
 class LRU_CACHE:
-    def __init__(self, maxsize=500000):
+    def __init__(self, maxsize=50000):
         self.cache = OrderedDict()
         self.maxsize = maxsize
 
@@ -118,12 +122,6 @@ def DefaultQ():
 
 env = GoFishEnv()
 LRU = LRU_CACHE()
-GLOBALQ = defaultdict(DefaultQ)
-if os.path.exists("q_table.pkl"):
-    with open("q_table.pkl", "rb") as f:
-        GLOBALQ = deepcopy(defaultdict(DefaultQ, joblib.load("q_table.pkl")))
-
-print(GLOBALQ)
 
 def GetAction(env, state, epsilon, hand):
     if np.random.rand() < epsilon and len(hand):
@@ -262,7 +260,7 @@ def Merge(Global, Local, Agents):
 
 AUTOSAVE = 100000
 TOTAL = 1000000
-AGENTS = 3
+AGENTS = 2
 
 if __name__ == "__main__":
     progress = 0
