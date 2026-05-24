@@ -12,7 +12,7 @@ import bisect
 
 starttime = time.time()
 
-def DefaultQ(self):
+def DefaultQ():
     return [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 
 GLOBALQ = defaultdict(DefaultQ)
