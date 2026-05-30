@@ -16,7 +16,6 @@ GLOBALQ = defaultdict(DefaultQ)
 if os.path.exists("q_table.pkl"):
     with open("q_table.pkl", "rb") as f:
         GLOBALQ = deepcopy(defaultdict(DefaultQ, joblib.load("q_table.pkl")))
-print(GLOBALQ)
 
 class GoFishEnv:
     def __init__(self):
@@ -122,13 +121,13 @@ env = GoFishEnv()
 LRU = LRU_CACHE()
 
 def GetAction(env, state, epsilon, hand):
+    q = env.Q[state].copy()
+    for i in range(13):
+        if not i + 1 in hand:
+            q[i] = -9999
     if np.random.rand() < epsilon and len(hand):
         return np.random.choice(hand)
     else:
-        q = env.Q[state].copy()
-        for i in range(13):
-            if not i + 1 in hand:
-                q[i] = -9999
         return np.argmax(q) + 1
 
 def Training(TRIALS, epsilon):
@@ -204,5 +203,5 @@ def Training(TRIALS, epsilon):
             wins += 1
     return wins
 
-TOTAL = 10000
+TOTAL = 100000
 print(Training(TOTAL, 0)/TOTAL)
